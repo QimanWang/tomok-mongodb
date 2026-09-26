@@ -76,6 +76,38 @@ test("invented hosts normalize only for an exact verified pathname and query", (
   );
 });
 
+test("milestone and selected-source links use authored fields without traversing schedule content", () => {
+  const target = "/files?file=34dc842bf8c24545&activity=milestone";
+  const pathNode = "/files?file=34dc842bf8c24545&activity=middle";
+  const edge = "/files?file=34dc842bf8c24545&activity=edge-target";
+  const selected = "/files?file=a32dce5276ea5268&sheet=Daily+Construction+Report&cell=AD4";
+  const injected = "/files?file=injected";
+  const milestoneContext = {
+    source: { href: schedule, raw: { href: injected } },
+    target: { href: target, dates: { href: injected } },
+    nodes: [{ href: pathNode, constraints: [{ href: injected }] }],
+    relationships: [{ citation: { href: edge }, raw: { href: injected }, href: injected }],
+    basis: { href: injected },
+    limitations: [{ href: injected }],
+  };
+  for (const part of [
+    completed("get_schedule_context", { milestoneContext, sourceText: { href: injected } }),
+    completed("investigate_jet_grouting", {
+      investigation: {
+        id: "saved", milestoneContext,
+        selectedSource: { href: selected, rawCells: { href: injected } },
+      },
+    }),
+  ]) {
+    const links = collectTomokProjectLinks([part]);
+    assert.deepEqual([...links].sort(),
+      [schedule, target, pathNode, edge, ...(part.toolName === "investigate_jet_grouting" ? [selected] : [])].sort());
+    for (const href of links) assert.equal(resolveProjectHref(`https://eve.com${href}`, links), href);
+    assert.equal(resolveProjectHref(`https://eve.com${injected}`, links), `https://eve.com${injected}`);
+    assert.equal(collectTomokProjectLinks([{ ...part, partial: true }]).size, 0);
+  }
+});
+
 test("memory results authorize current summary links and citations without traversing history", () => {
   const historyHref = "/memory/ffeeddccbbaa00998877665544332211";
   const hiddenCitation = "/files?file=historical&cell=A1";
@@ -139,6 +171,14 @@ test("memory links still require completed successful tools and canonical routes
   assert.equal(collectTomokProjectLinks(rejected).size, 0);
 });
 
+test("evidence answers authorize current reviewed citations without traversing excluded memory", () => {
+  const links = collectTomokProjectLinks([completed("get_project_evidence", {
+    evidence: [{ href: daily }], reviewedMemory: [{ href: memory, citations: [{ href: schedule }] }],
+    excludedMemory: [{ href: proposal }],
+  })]);
+  assert.deepEqual([...links], [daily, memory, schedule]);
+});
+
 test("failed, pending, partial, foreign, and text payloads cannot authorize links", () => {
   const output = { evidence: [{ href: daily }] };
   assert.equal(
@@ -200,4 +240,56 @@ test("trusted tool metadata and canonical root-relative routes are required", ()
     }),
   ]);
   assert.deepEqual([...hrefs], [daily]);
+});
+
+test("replay links retain exact frozen exhibit and memory anchors", () => {
+  const id = "aabbccddeeff00112233445566778899";
+  const base = `/replays/${id}`;
+  const exhibitId = "0123456789abcdef";
+  const exhibit = `${base}#exhibit-${exhibitId}`;
+  const scheduleExhibit = `${base}#exhibit-schedule`;
+  const memoryId = "11223344556677889900aabbccddeeff";
+  const memoryLink = `${base}#memory-${memoryId}`;
+  const hrefs = collectTomokProjectLinks([completed("get_replay_context", {
+    href: base,
+    investigation: {
+      id,
+      replay: {
+        exhibits: [
+          { id: exhibitId, href: exhibit, text: `${base}#exhibit-ffffffffffffffff`, cells: [{ href: daily }] },
+          { id: "schedule", href: scheduleExhibit },
+          { id: "ffffffffffffffff", href: `${base}#exhibit-eeeeeeeeeeeeeeee` },
+          { id: "0000000000000000", href: `${base}#exhibit-0000000000000000?extra=true` },
+          { id: "bad", href: `${base}#exhibit-bad` },
+        ],
+        reassessment: { findings: [{ citations: [{ href: `${base}#exhibit-ffffffffffffffff` }] }] },
+      },
+      reviewedMemory: [{ id: memoryId, href: memoryLink, revisions: [{ href: memory }] }],
+      findings: [{ citations: [{ href: daily }] }],
+    },
+  })]);
+  assert.deepEqual([...hrefs], [base, exhibit, scheduleExhibit, memoryLink]);
+  for (const href of [base, exhibit, scheduleExhibit, memoryLink]) {
+    assert.equal(resolveProjectHref(`https://eve.com${href}`, hrefs), href);
+  }
+  for (const href of [
+    `${base}#exhibit-ffffffffffffffff`, `${base}#memory-${id}`, `${exhibit}?extra=true`,
+    `${base}#exhibit-schedule-extra`, `${base}?cutoff=2026-07-16#exhibit-schedule`,
+    `/replays/${memoryId}#exhibit-schedule`,
+  ]) assert.equal(resolveProjectHref(`https://eve.com${href}`, hrefs), `https://eve.com${href}`);
+  assert.equal(resolveProjectHref(`https://eve.com${daily}#unexpected`, new Set([daily])), `https://eve.com${daily}#unexpected`);
+});
+
+test("failed or foreign replay outputs cannot authorize stage links", () => {
+  const id = "aabbccddeeff00112233445566778899";
+  const base = `/replays/${id}`;
+  const output = { href: base, investigation: { id, replay: { exhibits: [{ id: "schedule", href: `${base}#exhibit-schedule` }] } } };
+  assert.equal(collectTomokProjectLinks([
+    completed("get_replay_context", output, { partial: true }),
+    completed("get_replay_context", output, { state: "output-error" }),
+    completed("get_replay_context", { ...output, error: "failed" }),
+    completed("get_replay_context", output, { toolMetadata: { eve: { kind: "tool-call", name: "web_search" } } }),
+    completed("web_search", output),
+    completed("get_replay_context", { href: base, investigation: { id: "invalid" } }),
+  ]).size, 0);
 });

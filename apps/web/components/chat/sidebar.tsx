@@ -2,12 +2,14 @@
 
 import {
   ArrowRightIcon,
+  ClipboardListIcon,
   EllipsisIcon,
   FolderOpenIcon,
   BookOpenIcon,
   SearchIcon,
   PanelLeftIcon,
   PlusIcon,
+  PlayIcon,
   Trash2Icon,
 } from "lucide-react";
 import Link from "next/link";
@@ -288,7 +290,9 @@ function SidebarNavigation({
   const filesActive = pathname === "/files";
   const memoryActive = pathname === "/memory" || Boolean(pathname?.startsWith("/memory/"));
   const investigationsActive = pathname === "/investigations" || Boolean(pathname?.startsWith("/investigations/"));
-  const newSessionActive = activeChatId === null && !filesActive && !memoryActive && !investigationsActive;
+  const replayActive = pathname === "/replays" || Boolean(pathname?.startsWith("/replays/"));
+  const missionsActive = pathname === "/missions" || Boolean(pathname?.startsWith("/missions/"));
+  const newSessionActive = activeChatId === null && !filesActive && !memoryActive && !investigationsActive && !replayActive && !missionsActive;
   return (
     <>
       <button
@@ -303,10 +307,11 @@ function SidebarNavigation({
         type="button"
       >
         <PlusIcon className="size-4" />
-        New session
+        {replayActive ? "Leave replay: new session" : "New session"}
       </button>
       <Link
         href="/files"
+        prefetch={replayActive ? false : undefined}
         onClick={() => onNavigate?.(null)}
         className={cn(
           "flex h-8 items-center gap-2 rounded-md px-2 text-sm transition-colors",
@@ -315,17 +320,27 @@ function SidebarNavigation({
         aria-current={filesActive ? "page" : undefined}
       >
         <FolderOpenIcon className="size-4" />
-        Project files
+        {replayActive ? "Leave replay: files" : "Project files"}
       </Link>
-      <Link href="/investigations" onClick={() => onNavigate?.(null)}
+      <Link href="/investigations" prefetch={replayActive ? false : undefined} onClick={() => onNavigate?.(null)}
         className={cn("flex h-8 items-center gap-2 rounded-md px-2 text-sm transition-colors", investigationsActive ? activeRowClass : inactiveRowClass)}
         aria-current={investigationsActive ? "page" : undefined}>
-        <SearchIcon className="size-4" />Investigations
+        <SearchIcon className="size-4" />{replayActive ? "Leave replay: investigations" : "Investigations"}
       </Link>
-      <Link href="/memory" onClick={() => onNavigate?.(null)}
+      <Link href="/replays" onClick={() => onNavigate?.(null)}
+        className={cn("flex h-8 items-center gap-2 rounded-md px-2 text-sm transition-colors", replayActive ? activeRowClass : inactiveRowClass)}
+        aria-current={replayActive ? "page" : undefined}>
+        <PlayIcon className="size-4" />Case replay
+      </Link>
+      <Link href="/missions" prefetch={replayActive ? false : undefined} onClick={() => onNavigate?.(null)}
+        className={cn("flex h-8 items-center gap-2 rounded-md px-2 text-sm transition-colors", missionsActive ? activeRowClass : inactiveRowClass)}
+        aria-current={missionsActive ? "page" : undefined}>
+        <ClipboardListIcon className="size-4" />{replayActive ? "Leave replay: missions" : "Archive missions"}
+      </Link>
+      <Link href="/memory" prefetch={replayActive ? false : undefined} onClick={() => onNavigate?.(null)}
         className={cn("flex h-8 items-center gap-2 rounded-md px-2 text-sm transition-colors", memoryActive ? activeRowClass : inactiveRowClass)}
         aria-current={memoryActive ? "page" : undefined}>
-        <BookOpenIcon className="size-4" />Project memory
+        <BookOpenIcon className="size-4" />{replayActive ? "Leave replay: memory" : "Project memory"}
       </Link>
     </>
   );

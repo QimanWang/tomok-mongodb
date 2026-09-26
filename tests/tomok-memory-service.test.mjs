@@ -6,7 +6,7 @@ import { MongoMemoryServer } from "mongodb-memory-server";
 import { buildProjectImport } from "../apps/web/lib/tomok/import-data.ts";
 import { persistProjectImport, readEvidence } from "../apps/web/lib/tomok/repository.ts";
 import { closeProjectDb } from "../apps/web/lib/tomok/db.ts";
-import { investigateJetGrouting, getInvestigation } from "../apps/web/lib/tomok/service.ts";
+import { investigateJetGrouting, getInvestigation, getProjectEvidence } from "../apps/web/lib/tomok/service.ts";
 import { getProjectMemory, getMemoryContext, getProjectMemoryDetail, proposeProjectMemory, reviseProjectMemory, listProjectMemory } from "../apps/web/lib/tomok/memory-service.ts";
 let server, client, db, release, data;
 const owner = { principalId: "owner", principalType: "user", authenticator: "better-auth", issuer: "better-auth", attributes: { name: "Actual Owner" } };
@@ -73,6 +73,11 @@ test("explicit reviewed memory is shared, reused after reconnect, and frozen in 
   assert.equal(retrieved.memories[0].reviewedBy.name, "Actual Owner");
   assert.ok(!("revisions" in retrieved.memories[0]));
   assert.equal((await getProjectMemoryDetail(memory.id, reviewer)).viewer.name, "Actual Reviewer");
+  const evidenceAnswer = await getProjectEvidence({ cutoff: question.cutoff, query: "grouting" }, reviewer);
+  assert.equal(evidenceAnswer.reviewedMemory[0].id, memory.id);
+  assert.equal(evidenceAnswer.reviewedMemory[0].revision, 2);
+  assert.equal(evidenceAnswer.reviewedMemory[0].reviewedBy.name, "Actual Owner");
+  assert.deepEqual((await getProjectEvidence({ cutoff: "2026-07-13" }, reviewer)).reviewedMemory, []);
   const current = (await investigateJetGrouting(question, owner)).investigation;
   assert.notEqual(current.id, investigation.id);
   assert.equal(current.reviewedMemory[0].revision, 2);
@@ -92,6 +97,7 @@ test("explicit reviewed memory is shared, reused after reconnect, and frozen in 
   assert.notEqual(next.id, current.id); assert.equal(next.reviewedMemory[0].revision, 3);
   await reviseProjectMemory(memory.id, { expectedRevision: 3, action: "flag", reason: "Needs more context" }, owner);
   assert.deepEqual((await getProjectMemory({ cutoff: question.cutoff }, owner)).memories, []);
+  assert.deepEqual((await getProjectEvidence({ cutoff: question.cutoff }, reviewer)).reviewedMemory, []);
   assert.equal((await getInvestigation(next.id, owner)).investigation.reviewedMemory[0].revision, 3);
   await reviseProjectMemory(memory.id, { expectedRevision: 4, action: "withdraw", reason: "Test withdrawn" }, reviewer);
   assert.deepEqual((await getProjectMemory({ cutoff: question.cutoff }, owner)).memories, []);

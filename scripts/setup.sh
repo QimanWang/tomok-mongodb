@@ -274,7 +274,7 @@ setup_optional_mcp_connector "Sentry" SENTRY_CONNECTOR https://mcp.sentry.dev/mc
 
 # --- 7. Pull environment variables locally ----------------------------------
 step "Pulling environment variables to .env.local"
-vercel env pull .env.local --yes
+node scripts/pull-env.mjs $SCOPE_FLAGS
 # BETTER_AUTH_URL is only set for Production/Preview; local dev uses localhost.
 if ! grep -q '^BETTER_AUTH_URL=' .env.local 2>/dev/null; then
   echo 'BETTER_AUTH_URL=http://localhost:3000' >> .env.local

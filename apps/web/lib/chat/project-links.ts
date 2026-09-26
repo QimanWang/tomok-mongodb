@@ -46,6 +46,14 @@ export function collectTomokProjectLinks(
     for (const citation of items(summary?.citations))
       add(record(citation)?.href);
   };
+  const addMilestoneContext = (value: unknown) => {
+    const context = record(value);
+    add(record(context?.source)?.href);
+    add(record(context?.target)?.href);
+    for (const node of items(context?.nodes)) add(record(node)?.href);
+    for (const relationship of items(context?.relationships))
+      add(record(record(relationship)?.citation)?.href);
+  };
   for (const part of parts) {
     if (
       part.type !== "dynamic-tool" ||
@@ -60,7 +68,27 @@ export function collectTomokProjectLinks(
       metadataName && metadataName !== "unknown" ? metadataName : part.toolName;
     const output = record(part.output);
     if (!output || output.error) continue;
-    if (name === "investigate_jet_grouting") {
+    if (name === "get_replay_context") {
+      const investigation = record(output.investigation);
+      if (typeof investigation?.id !== "string" || !/^[a-f0-9]{32}$/.test(investigation.id)) continue;
+      const base = `/replays/${investigation.id}`;
+      if (output.href === base) hrefs.add(base);
+      const replay = record(investigation.replay);
+      // Only exact targets represented by frozen exhibits/notes establish links.
+      // Citations and source cell text cannot invent another stage or anchor.
+      for (const value of items(replay?.exhibits)) {
+        const exhibit = record(value);
+        if (typeof exhibit?.id !== "string" || !/^(?:schedule|[a-f0-9]{16})$/.test(exhibit.id)) continue;
+        const href = `${base}#exhibit-${exhibit.id}`;
+        if (exhibit.href === href) hrefs.add(href);
+      }
+      for (const value of items(investigation.reviewedMemory)) {
+        const memory = record(value);
+        if (typeof memory?.id !== "string" || !/^[a-f0-9]{32}$/.test(memory.id)) continue;
+        const href = `${base}#memory-${memory.id}`;
+        if (memory.href === href) hrefs.add(href);
+      }
+    } else if (name === "investigate_jet_grouting") {
       const investigation = record(output.investigation);
       if (!investigation || typeof investigation.id !== "string") continue;
       add(output.href);
@@ -70,6 +98,8 @@ export function collectTomokProjectLinks(
       }
       for (const memory of items(investigation.reviewedMemory))
         addMemorySummary(memory);
+      add(record(investigation.selectedSource)?.href);
+      addMilestoneContext(investigation.milestoneContext);
     } else if (name === "get_project_memory") {
       for (const memory of items(output.memories)) addMemorySummary(memory);
     } else if (name === "propose_project_memory") {
@@ -77,16 +107,18 @@ export function collectTomokProjectLinks(
     } else if (name === "get_project_evidence") {
       for (const evidence of items(output.evidence))
         add(record(evidence)?.href);
+      for (const memory of items(output.reviewedMemory)) addMemorySummary(memory);
     } else if (name === "get_schedule_context") {
       add(record(output.activity)?.href);
       for (const activity of items(output.neighbors))
         add(record(activity)?.href);
+      addMilestoneContext(output.milestoneContext);
     }
   }
   return hrefs;
 }
 
-/** Repair an invented host only when its full path and query identify an actual tool-returned link. */
+/** Repair an invented host only when its path, query, and fragment identify an actual tool-returned link. */
 export function resolveProjectHref(
   href: string | undefined,
   authoritative: ReadonlySet<string>,
@@ -94,7 +126,7 @@ export function resolveProjectHref(
   if (!href || !/^(?:https?:)?\/\//i.test(href)) return href;
   try {
     const url = new URL(href, localOrigin);
-    const path = `${url.pathname}${url.search}`;
+    const path = `${url.pathname}${url.search}${url.hash}`;
     return authoritative.has(path) ? path : href;
   } catch {
     return href;

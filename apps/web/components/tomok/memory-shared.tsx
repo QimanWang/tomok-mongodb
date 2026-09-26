@@ -7,6 +7,7 @@ import { useChatShell } from "@/app/_components/chat-shell-context";
 import type {
   MemoryActor,
   MemoryCitation,
+  MemoryOrigin,
   MemoryStatus,
   ProjectMemory,
 } from "@/lib/tomok/memory-types";
@@ -23,7 +24,7 @@ export type MemoryEvidence = {
 };
 
 export type MemoryContext = {
-  investigation: { id: string; title: string; cutoff: string };
+  investigation: MemoryOrigin;
   activity: { code: string; name: string; href: string };
   evidence: MemoryEvidence[];
   viewer: MemoryActor;
@@ -35,6 +36,7 @@ export type MemoryDetailResponse = {
   evidence: MemoryEvidence[];
   viewer: MemoryActor;
   activeReleaseId: string;
+  origin: MemoryOrigin | null;
 };
 
 export function memoryDate(value: string | null) {

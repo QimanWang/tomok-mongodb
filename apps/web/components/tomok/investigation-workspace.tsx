@@ -16,6 +16,7 @@ import {
   ClipboardCheck,
   Files,
   LoaderCircle,
+  Play,
   Search,
   TriangleAlert,
 } from "lucide-react";
@@ -23,6 +24,9 @@ import { useChatShell } from "@/app/_components/chat-shell-context";
 import type { Investigation } from "@/lib/tomok/service";
 import { useProjectJson } from "./use-project-json";
 import { ReviewedMemoryNotes } from "./memory-notes";
+import { milestoneOptions, type TargetMilestoneCode } from "@/lib/tomok/investigation-options";
+import type { SelectedSourceInput } from "@/lib/tomok/source-selection";
+import { MilestoneContext, SelectedSourceContext } from "./investigation-context";
 import "./investigation.css";
 
 type EvidenceStatus = {
@@ -37,6 +41,7 @@ type EvidenceStatus = {
     evidence: number;
     sources: number;
   };
+  semanticSearch?: { status: string; queryable: boolean; model?: string; dimensions?: number };
   error?: string;
 };
 
@@ -125,25 +130,33 @@ function ErrorState({
 
 export function InvestigationWorkspace() {
   const params = useSearchParams();
+  const source = params.get("source");
+  const selectedSource: SelectedSourceInput | undefined = source ? {
+    sourceId: source, sha256: params.get("sha256") ?? "",
+    ...(params.has("activity") ? { activity: params.get("activity")! } : {}),
+    ...(params.has("sheet") ? { sheet: params.get("sheet")! } : {}),
+    ...(params.has("cell") ? { cell: params.get("cell")! } : {}),
+    ...(params.has("page") ? { page: Number(params.get("page")) } : {}),
+  } : undefined;
   // Recreate the form when navigation supplies a different reporting cutoff.
   return (
     <InvestigationForm
       key={params.toString()}
       initialCutoff={params.get("cutoff") ?? "2026-07-16"}
-      source={params.get("source")}
-      activity={params.get("activity")}
+      initialSource={selectedSource}
+      sourceName={params.get("sourceName")}
     />
   );
 }
 
 function InvestigationForm({
   initialCutoff,
-  source,
-  activity,
+  initialSource,
+  sourceName,
 }: {
   initialCutoff: string;
-  source: string | null;
-  activity: string | null;
+  initialSource?: SelectedSourceInput;
+  sourceName: string | null;
 }) {
   const router = useRouter();
   const { viewer } = useChatShell();
@@ -153,6 +166,8 @@ function InvestigationForm({
     retry,
   } = useProjectJson<EvidenceStatus>("/api/tomok/status", viewer?.id ?? "");
   const [cutoff, setCutoff] = useState(initialCutoff);
+  const [selectedSource, setSelectedSource] = useState(initialSource);
+  const [targetMilestoneCode, setTargetMilestoneCode] = useState<TargetMilestoneCode | "">("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const request = useRef<AbortController | null>(null);
@@ -167,14 +182,19 @@ function InvestigationForm({
     };
   }, []);
   const validDate = reportDates.includes(cutoff);
-  const question = `As of ${dateLabel(cutoff)}, how is South Portal jet grouting progressing against the field plan and P6? What needs attention?`;
+  const question = `As of ${dateLabel(cutoff)}, how is South Portal jet grouting progressing against the field plan and P6? What needs attention?${targetMilestoneCode ? ` Inspect the imported dependencies toward ${targetMilestoneCode}; do not recalculate milestone dates.` : ""}`;
   const sourceParams = new URLSearchParams();
-  if (source) sourceParams.set("file", source);
-  if (activity) sourceParams.set("activity", activity);
+  if (selectedSource) {
+    sourceParams.set("file", selectedSource.sourceId);
+    for (const key of ["activity", "sheet", "cell", "page"] as const) {
+      if (selectedSource[key] !== undefined) sourceParams.set(key, String(selectedSource[key]));
+    }
+  }
+  const sourceVersionMissing = Boolean(selectedSource && !/^[a-f0-9]{64}$/.test(selectedSource.sha256));
 
   async function investigate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (request.current || !status?.imported || !validDate) return;
+    if (request.current || !status?.imported || !validDate || sourceVersionMissing) return;
     const controller = new AbortController();
     request.current = controller;
     setBusy(true);
@@ -184,7 +204,7 @@ function InvestigationForm({
         method: "POST",
         signal: controller.signal,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cutoff, question }),
+        body: JSON.stringify({ cutoff, question, ...(selectedSource ? { selectedSource } : {}), ...(targetMilestoneCode ? { targetMilestoneCode } : {}) }),
       });
       const body = await response.json().catch(() => null);
       if (!response.ok)
@@ -212,7 +232,7 @@ function InvestigationForm({
   return (
     <Frame>
       <div className="tk-content">
-        {source && (
+        {selectedSource && (
           <Link
             className="tk-back-link"
             href={`/files?${sourceParams.toString()}`}
@@ -232,6 +252,10 @@ function InvestigationForm({
           Compare recorded field progress with the field plan and the imported
           P6 schedule. Open the sources behind each finding.
         </p>
+        <Link href="/replays" className="tk-button mb-5">
+          <Play size={14} aria-hidden="true" />
+          Open the staged case replay
+        </Link>
         <form
           className="tk-investigation-form"
           onSubmit={investigate}
@@ -266,6 +290,23 @@ function InvestigationForm({
               Choose an available report date from July 13–16, 2026.
             </p>
           )}
+          <div className="tk-date-control tk-milestone-control">
+            <label htmlFor="investigation-milestone">Target milestone</label>
+            <select id="investigation-milestone" value={targetMilestoneCode} disabled={busy}
+              aria-describedby="milestone-note" onChange={event => setTargetMilestoneCode(event.target.value as TargetMilestoneCode | "")}>
+              <option value="">Not selected</option>
+              {milestoneOptions.map(item => <option key={item.code} value={item.code}>{item.label}</option>)}
+            </select>
+            <p id="milestone-note">Optional dependency context. Selection does not establish acceptance or a driving path.</p>
+          </div>
+          {selectedSource && <div className="tk-selected-source tk-form-source">
+            <h3>Source attached to this question</h3>
+            <Link href={`/files?${sourceParams}`} prefetch={false}>{sourceName || selectedSource.sourceId}{selectedSource.activity ? ` · activity ${selectedSource.activity}` : selectedSource.sheet ? ` · ${selectedSource.sheet}${selectedSource.cell ? `!${selectedSource.cell}` : ""}` : selectedSource.page ? ` · page ${selectedSource.page}` : ""}</Link>
+            <p className="tk-source-version">Version {selectedSource.sha256.slice(0, 12) || "missing"}</p>
+            <p>The exact location will be saved. Only imported, eligible evidence supports findings; a selection does not ingest or approve the source.</p>
+            {sourceVersionMissing && <p className="tk-validation" role="alert">Open the source and select “Investigate with this source” again to attach its version.</p>}
+            <button type="button" className="tk-text-button" disabled={busy} onClick={() => setSelectedSource(undefined)}>Remove source context</button>
+          </div>}
           <div className="tk-question">
             <span className="tk-eyebrow">QUESTION</span>
             <p>
@@ -283,7 +324,7 @@ function InvestigationForm({
             <button
               className="tk-button tk-primary"
               type="submit"
-              disabled={busy || !validDate || !status?.imported}
+              disabled={busy || !validDate || !status?.imported || sourceVersionMissing}
             >
               {busy ? (
                 <LoaderCircle
@@ -331,6 +372,11 @@ function InvestigationForm({
                   {status.counts.sources.toLocaleString("en-US")} sources
                 </p>
               )}
+              {status.semanticSearch && <p className="tk-scope">
+                {status.semanticSearch.queryable ? "Semantic source search ready."
+                  : ["BUILDING", "PENDING", "INITIAL_SYNC"].includes(status.semanticSearch.status) ? "Semantic search is indexing; exact source retrieval remains available."
+                    : "Semantic search is unavailable; exact source retrieval remains available."}
+              </p>}
             </div>
           </div>
         )}
@@ -426,6 +472,8 @@ export function SavedInvestigation({ id }: { id: string }) {
                 </div>
               </dl>
             </section>
+            {result.selectedSource && <SelectedSourceContext source={result.selectedSource} />}
+            {result.milestoneContext ? <MilestoneContext context={result.milestoneContext} /> : <p className="tk-scope tk-milestone-unselected">No target milestone was selected for this saved investigation. Completion impact remains unresolved.</p>}
             <div className="tk-findings">
               {findingGroups.map((group) => {
                 const findings = result.findings.filter(

@@ -73,3 +73,35 @@ test("rejects missing and non-JSON media types including misleading JSON prefixe
     })), statusIs(415));
   }
 });
+
+test("local Vercel services accept only the configured public origin through a loopback backend", () => {
+  const saved = { NODE_ENV: process.env.NODE_ENV, VERCEL_ENV: process.env.VERCEL_ENV, VERCEL_URL: process.env.VERCEL_URL };
+  const internal = "http://localhost:57672/api/tomok/replays";
+  const headers = { host: "[::1]:57672", origin: "http://localhost:3001", "x-forwarded-host": "localhost:3001", "x-forwarded-proto": "http" };
+  try {
+    Object.assign(process.env, { NODE_ENV: "development", VERCEL_ENV: "development", VERCEL_URL: "localhost:3001" });
+    assert.doesNotThrow(() => requireSameOrigin(request(internal, headers)));
+    for (const change of [
+      { origin: "http://localhost:9999", "x-forwarded-host": "localhost:9999" },
+      { origin: "http://attacker.example", "x-forwarded-host": "attacker.example" },
+      { "x-forwarded-host": "localhost:3001, attacker.example" },
+      { "x-forwarded-host": null }, { "x-forwarded-proto": "https" },
+      { "sec-fetch-site": "same-site" }, { "sec-fetch-site": null },
+      { host: "attacker.example:57672" },
+    ]) assert.throws(() => requireSameOrigin(request(internal, { ...headers, ...change })), statusIs(403));
+    for (const invalidConfig of ["attacker.example", "localhost:3001/path", "user@localhost:3001", ""]) {
+      process.env.VERCEL_URL = invalidConfig;
+      assert.throws(() => requireSameOrigin(request(internal, headers)), statusIs(403));
+    }
+    process.env.VERCEL_URL = "localhost:3001";
+    process.env.NODE_ENV = "production";
+    assert.throws(() => requireSameOrigin(request(internal, headers)), statusIs(403));
+    process.env.NODE_ENV = "development";
+    process.env.VERCEL_ENV = "production";
+    assert.throws(() => requireSameOrigin(request(internal, headers)), statusIs(403));
+  } finally {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+  }
+});

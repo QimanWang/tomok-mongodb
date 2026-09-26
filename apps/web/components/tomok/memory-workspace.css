@@ -583,3 +583,23 @@
     flex-basis: 100%;
   }
 }
+.tm-replay-handoff {
+  margin: 24px 0;
+  padding: 18px 0;
+  border-block: 1px solid var(--border);
+}
+.tm-replay-handoff h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.tm-replay-handoff p {
+  margin: 0 0 12px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.tm-replay-handoff .tk-button {
+  white-space: normal;
+  text-align: left;
+}

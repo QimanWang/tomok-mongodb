@@ -7,8 +7,8 @@ this repository. The port includes the source-file viewers, MongoDB evidence
 import, saved investigations, and human-reviewed memory from the `tomok` repo,
 including its in-progress memory changes.
 
-The product routes are `/files`, `/investigations`, and `/memory`. Web code lives
-under `apps/web`; the eve agent and its five project tools live under `agent`.
+The product routes are `/files`, `/investigations`, `/memory`, `/replays`, and `/missions`. Web code lives
+under `apps/web`; the eve agent and its project tools live under `agent`.
 The newer eve service composition in `vercel.ts` remains in place.
 
 Use Node 24+ and `pnpm install`. Keep the eight registered source files in
@@ -22,8 +22,86 @@ same environment explicitly when running the web service on its own.
 
 Checks: `pnpm test:tomok`, `pnpm test:project-files`, `pnpm typecheck`,
 `pnpm build:web`, and `pnpm test:project-files:api` (after building the web app).
-`pnpm build:eve` builds the separate agent. Vector Search and later-report
-reassessment remain planned.
+`pnpm build:eve` builds the separate agent.
+
+Case replay starts with July 13–14 observations, then explicitly reveals July
+15–16 in a new saved reassessment. Each stage stores its selected source excerpts,
+schedule basis, and reviewed-note revisions in MongoDB. Its citations open frozen
+excerpts; full files and live memory are explicitly outside the replay. The
+undated field plan is assumed context, so this is a reporting-date exercise rather
+than a reconstruction of what was historically known. Reviewed-note pages offer
+an explicit new-replay action to capture currently applicable notes; retries
+preserve the existing stages. Memory review links return to their originating
+replay or investigation without changing its saved evidence.
+
+Reassessment suggests review for interpretations citing affected planning rows
+and preserves mappings and memory history. A person must make any memory status
+change. Each saved stage can open a fresh conversation permanently bound to its
+cutoff and saved revisions. MongoDB stores the owner/session/stage binding before
+the first message; eve stores the conversation stream. Refresh restores a bounded
+transcript snapshot and resumes from its cursor. `/replays` lists the owner's 20
+most recently started cases with both saved stages; each stage lists its 20 most
+recently opened conversations with resume links. Older saved URLs remain valid.
+These lists are private and do not use the template's browser chat list.
+Transcript retention depends on the eve runtime. Revealing later reports requires
+a separate stage and a fresh conversation.
+
+Replay turns expose only `get_replay_context`. Live project tools, external
+connections, and profile memory are unavailable; execution guards and every eve
+session route also check the server binding. Reset/clear cannot erase a replay's
+conversation history. Optional shell, file, web, and delegation defaults are
+disabled for this project agent. Chat session authorization now requires MongoDB
+so unavailable scope storage cannot silently widen access. Ordinary project chats
+retain the authored project tools and configured connections.
+
+Atlas Vector Search ranks evidence and optionally current reviewed notes using
+Voyage 4 with 1,024 dimensions. Run `pnpm search:project` after importing, then
+`pnpm search:project --status` and `pnpm search:project --verify`. Atlas generates
+the embeddings natively; no separate embedding-provider credential is needed.
+Derived search documents preserve the source import and note histories. Date,
+project, import, and current eligible revision filters apply before ranking;
+returned text comes from the authorized source records. Index lag or failure is
+reported as keyword fallback. Evidence answers also include the current eligible
+reviewed notes. Frozen replay chats keep their saved evidence scope.
+MongoDB currently labels Automated Embedding as a preview feature in its
+[documentation](https://www.mongodb.com/docs/vector-search/crud-embeddings/automated-embedding/).
+
+Archive missions use one eve agent to choose, read, and extract facts from bounded
+source jobs. The first preset inventories all eight registered files and processes
+nine units: one XER activity neighborhood, four SOE worksheet rows, and four daily
+report rows. MongoDB owns the mission queue, leases, immutable result references,
+coverage, report, and policy history. eve owns durable model/tool execution and
+the session stream. An accepted turn runs without an open browser; the separate
+worker reconciles pending deliveries and interrupted work.
+
+For local missions, configure the same `TOMOK_MISSION_DISPATCH_SECRET` in both
+services and the CLI worker using the root `.env.development.local`. Use a random
+value of at least 16 characters. The
+[archive mission deployment guide](docs/setup-and-deploy.md#archive-missions)
+includes a command that creates it without printing it, then starts both services
+and `pnpm missions:worker --host localhost:3001`. The worker is required in local
+development because eve dev does not fire schedules automatically. Deployed
+reconciliation uses the authored `reconcile_missions` schedule and needs a host
+that actually runs scheduled tasks.
+
+Mission tools resolve their source scope from a server-bound session, enforce
+serial leases and bounded work/model budgets, and keep extracted facts and draft
+lessons separate from reviewed project memory. The current adaptive policy only
+omits genuinely empty workbook cells from model context. The live nine-unit
+comparison reduced serialized context bytes by 5.85% while passing
+the fixed source-preservation checks. This measures context bytes on inspected
+records; model token savings, extraction accuracy, and generalization have not
+been measured. A live process restart preserved two committed source outputs and
+continued in a replacement session. After explicit bounded budget resumes, the
+rehearsal completed all 13 jobs across nine source units and saved an unreviewed
+report. Development verification caught unsupported date-provenance and schedule
+interpretations; the corrected draft retains the original report history and
+flags four immutable fact labels for review. See the runbook for the measured
+recovery mechanism, corrections, and remaining deployment checks.
+
+Jae's accepted interpretation/target milestone, public-source permissions, and
+domain acceptance of the complete demo remain pending. The local rehearsal is
+documented in [the demo runbook](docs/tomok-company/hackathon/demo-runbook.md).
 
 ## Chat template setup
 
@@ -69,8 +147,13 @@ Link the existing Vercel project and pull its development credentials:
 
 ```bash
 pnpm exec vercel link --scope tomok-1987fe8e --project tomok-mongodb
-pnpm exec vercel env pull .env.local --yes
+pnpm exec node scripts/pull-env.mjs
 ```
+
+This pull preserves local variables absent from Vercel, including MongoDB credentials,
+and saves the previous file as a gitignored `.env.local.backup-*` with owner-only access.
+Values present in Vercel are refreshed. Avoid pulling directly over `.env.local`
+with `vercel env pull`, which replaces the file.
 
 Start the web app and eve together:
 
@@ -142,7 +225,7 @@ If the connector is not attached to the linked project, run:
 
 ```bash
 vercel connect attach <connector-uid> --yes
-vercel env pull .env.local
+pnpm exec node scripts/pull-env.mjs
 ```
 
 Production mode only: create the database tables:

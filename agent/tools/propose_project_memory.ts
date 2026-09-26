@@ -1,8 +1,9 @@
-import { defineTool } from "eve/tools";
+import { defineDynamic, defineTool } from "eve/tools";
 import { z } from "zod";
+import { isBoundedProjectSession, requireLiveProjectSession } from "../lib/session-scope";
 import { proposeProjectMemory } from "../../apps/web/lib/tomok/memory-service";
 
-export default defineTool({
+export const liveTool = defineTool({
   description:
     "Save a draft mapping or interpretation for human review when the user requests it. Requires an existing investigation and exact supporting evidence IDs. This only creates a proposal: it does not approve knowledge, impersonate a reviewer, or change an existing memory's review status. Human review and corrections happen in the Tomok UI.",
   inputSchema: z.strictObject({
@@ -35,6 +36,7 @@ export default defineTool({
     { message: "The validity end must not precede its start.", path: ["validThrough"] },
   ),
   async execute(input, ctx) {
+    await requireLiveProjectSession(ctx.session);
     const { memory, href } = await proposeProjectMemory(input, ctx.session.auth.current);
     return {
       href,
@@ -46,5 +48,14 @@ export default defineTool({
       message:
         "Open this note to review its current state. This proposal call does not accept or review knowledge; a repeated proposal may return a note whose status has since changed.",
     };
+  },
+});
+
+export default defineDynamic({
+  events: {
+    "turn.started": async (_event, ctx) => {
+      if (await isBoundedProjectSession(ctx.session)) return null;
+      return liveTool;
+    },
   },
 });

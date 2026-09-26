@@ -27,6 +27,8 @@
     "test:project-files": "node --import tsx --test tests/project-files.test.mjs",
     "test:project-files:api": "node tests/project-files-api.mjs",
     "import:project": "node --env-file-if-exists=.env.local --env-file-if-exists=.env.development.local --import tsx scripts/import-project.ts",
+    "search:project": "node --env-file-if-exists=.env.local --env-file-if-exists=.env.development.local --import tsx scripts/index-project-search.ts",
+    "missions:worker": "node --env-file-if-exists=.env.local --env-file-if-exists=.env.development.local --import tsx scripts/mission-worker.ts",
     "test:tomok": "node --import tsx --test tests/tomok-*.test.mjs"
   },
   "dependencies": {

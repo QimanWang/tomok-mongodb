@@ -1,6 +1,13 @@
 export type MemoryKind = "mapping" | "interpretation";
 export type MemoryStatus = "proposed" | "reviewed" | "needs_review" | "withdrawn";
 export type MemoryActor = { id: string; name: string };
+export type MemoryOrigin = {
+  id: string;
+  title: string;
+  cutoff: string;
+  kind: "replay" | "investigation";
+  href: string;
+};
 export type MemoryContent = {
   kind: MemoryKind;
   title: string;

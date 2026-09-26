@@ -7,9 +7,12 @@ import { TomokError, safeStorageError } from "./errors";
 import { evidenceForModel } from "./evidence";
 import { selectApplicableMemory } from "./memory-eligibility";
 import { appendMemoryRevision, createProposal, getMemory, listMemory } from "./memory-repository";
-import type { MemoryCitation, MemoryContent, MemoryRevision, ProjectMemory } from "./memory-types";
+import type { MemoryCitation, MemoryContent, MemoryOrigin, MemoryRevision, ProjectMemory } from "./memory-types";
 import { JET_GROUT_CODE, PROJECT_ID, readContext, readEvidence, readInvestigation, requireRelease, type Release } from "./repository";
 import type { Investigation } from "./service";
+import { memorySearchCandidates, rankSearchCandidates } from "./semantic-search";
+import type { CaseReplay } from "./replay-types";
+import { REPLAY_VERSION } from "./replay";
 
 const contentShape = {
   kind: z.enum(["mapping", "interpretation"]),
@@ -24,7 +27,7 @@ const revisionSchema = z.discriminatedUnion("action", [
   z.strictObject({ action: z.literal("review"), expectedRevision: z.number().int().min(1).max(100), reason: z.string().trim().min(1).max(1_000).nullable(), content: contentSchema }),
   z.strictObject({ action: z.enum(["flag", "withdraw"]), expectedRevision: z.number().int().min(1).max(100), reason: z.string().trim().min(1).max(1_000) }),
 ]);
-const retrievalSchema = z.strictObject({ cutoff: z.iso.date(), activityCode: z.string().trim().min(1).max(100).optional() });
+const retrievalSchema = z.strictObject({ cutoff: z.iso.date(), activityCode: z.string().trim().min(1).max(100).optional(), query: z.string().trim().min(1).max(200).optional() });
 function parse<T>(schema: z.ZodType<T>, input: unknown): T {
   const result = schema.safeParse(input);
   if (!result.success) throw new TomokError("Enter a title, statement, valid date range, and 1–10 source references. Review changes need a reason.", 422);
@@ -53,6 +56,11 @@ async function requireInvestigation(db: Db, id: string, owner: string) {
   if (!investigation) throw new TomokError("Investigation not found.", 404);
   return investigation;
 }
+function memoryOrigin(investigation: Investigation): MemoryOrigin {
+  const kind = (investigation as Partial<CaseReplay>).replay?.version === REPLAY_VERSION ? "replay" : "investigation";
+  return { id: investigation.id, title: investigation.title, cutoff: investigation.cutoff, kind,
+    href: `/${kind === "replay" ? "replays" : "investigations"}/${investigation.id}` };
+}
 async function evidenceChoices(db: Db, release: Release, cutoff: string) {
   return (await readEvidence(db, release, cutoff))
     .filter((row) => row.activityCode === JET_GROUT_CODE || row.facts.candidateActivityCode === JET_GROUT_CODE)
@@ -73,21 +81,26 @@ export type MemorySummary = Pick<MemoryContent, "kind" | "title" | "statement" |
   id: string; revision: number; reviewedBy: { id: string; name: string }; reviewedAt: string;
   href: string; citations: MemoryCitation[];
 };
-function summary(memory: ProjectMemory): MemorySummary {
+export function memorySummary(memory: ProjectMemory): MemorySummary {
   const { kind, title, statement, validFrom, validThrough, revision, actor, recordedAt, citations } = memory.latest;
   return { id: memory.id, revision, kind, title, statement, validFrom, validThrough, reviewedBy: actor, reviewedAt: recordedAt, href: `/memory/${memory.id}`, citations };
 }
 export async function readApplicableMemory(db: Db, release: Release, actorId: string, cutoff: string, activityCode: string) {
   const selection = selectApplicableMemory(await listMemory(db, actorId), { releaseId: release.releaseId, activityCode, cutoff });
-  return { memories: selection.applicable.map(summary).sort((a, b) => a.id.localeCompare(b.id)), excluded: selection.excluded };
+  return { memories: selection.applicable.map(memorySummary).sort((a, b) => a.id.localeCompare(b.id)), excluded: selection.excluded };
 }
-export async function getProjectMemory(input: { cutoff: string; activityCode?: string }, principal: ProjectPrincipal) {
+export async function getProjectMemory(input: { cutoff: string; activityCode?: string; query?: string }, principal: ProjectPrincipal) {
   const viewer = projectActor(principal);
-  const { cutoff, activityCode = JET_GROUT_CODE } = parse(retrievalSchema, input);
+  const { cutoff, activityCode = JET_GROUT_CODE, query } = parse(retrievalSchema, input);
   try {
     const db = await projectDb(); const release = await requireRelease(db);
+    const eligible = await readApplicableMemory(db, release, viewer.id, cutoff, activityCode);
+    const ranked = await rankSearchCandidates(db, release, "memory", cutoff, query, memorySearchCandidates(eligible.memories));
+    // A human can flag or revise a note while the remote search runs. Recheck the authoritative revision.
+    const current = query ? await readApplicableMemory(db, release, viewer.id, cutoff, activityCode) : eligible;
+    const memories = ranked.values.filter((row) => current.memories.some((note) => note.id === row.id && note.revision === row.revision));
     return { projectId: PROJECT_ID, releaseId: release.releaseId, cutoff, activityCode,
-      ...await readApplicableMemory(db, release, viewer.id, cutoff, activityCode),
+      memories, excluded: current.excluded, retrieval: { ...ranked.retrieval, returnedCount: memories.length },
       scopeNote: "Current reviewed knowledge applied to this reporting date, not what was known then. Latest 100 accessible notes considered. Sources and human interpretations remain distinct; review does not establish an undated plan's issue date or recalculate CPM. Excluded note text and superseded revisions are not supplied.",
     };
   } catch (error) { return safeStorageError(error); }
@@ -106,7 +119,7 @@ export async function getMemoryContext(id: string, principal: ProjectPrincipal) 
     const investigation = await requireInvestigation(db, id, viewer.id);
     sameRelease(release, investigation.releaseId);
     const { activity } = await readContext(db, release, JET_GROUT_CODE);
-    return { investigation: { id, title: investigation.title, cutoff: investigation.cutoff },
+    return { investigation: memoryOrigin(investigation),
       activity: { code: activity.code, name: activity.name, href: activity.href },
       evidence: await evidenceChoices(db, release, investigation.cutoff), viewer, activeReleaseId: release.releaseId };
   } catch (error) { return safeStorageError(error); }
@@ -136,7 +149,8 @@ export async function getProjectMemoryDetail(id: string, principal: ProjectPrinc
     const memory = await requireMemory(db, id, viewer.id);
     // Access was checked on the shared note; its origin supplies only the immutable cutoff.
     const origin = await requireInvestigation(db, memory.originInvestigationId, memory.createdBy.id);
-    return { memory, evidence: await evidenceChoices(db, { ...release, releaseId: memory.releaseId }, origin.cutoff), viewer, activeReleaseId: release.releaseId };
+    return { memory, evidence: await evidenceChoices(db, { ...release, releaseId: memory.releaseId }, origin.cutoff), viewer, activeReleaseId: release.releaseId,
+      origin: memory.createdBy.id === viewer.id ? memoryOrigin(origin) : null };
   } catch (error) { return safeStorageError(error); }
 }
 export async function reviseProjectMemory(id: string, input: unknown, principal: ProjectPrincipal) {

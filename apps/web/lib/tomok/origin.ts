@@ -1,5 +1,24 @@
 import { TomokError } from "./errors";
 
+function isLocalServiceProxy(request: Request, origin: URL, target: URL) {
+  if (process.env.NODE_ENV !== "development" || process.env.VERCEL_ENV !== "development") return false;
+  const publicHost = process.env.VERCEL_URL;
+  if (!publicHost) return false;
+  try {
+    const configured = new URL(`http://${publicHost}`);
+    const backend = new URL(`http://${request.headers.get("host") ?? target.host}`);
+    const loopback = (url: URL) => ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+    // Vercel's local service router replaces Host with the internal service port.
+    // Bind the exception to its server-configured public address, never to an
+    // arbitrary forwarding header. Production continues to use the ordinary Host check.
+    return configured.host === publicHost && loopback(configured) && loopback(backend) && loopback(target) &&
+      origin.origin === configured.origin && target.protocol === "http:" &&
+      request.headers.get("x-forwarded-host") === publicHost &&
+      request.headers.get("x-forwarded-proto") === "http" &&
+      request.headers.get("sec-fetch-site") === "same-origin";
+  } catch { return false; }
+}
+
 export function requireSameOrigin(request: Request) {
   const origin = request.headers.get("origin");
   // Next may use its listening hostname in request.url (localhost) while the
@@ -16,7 +35,7 @@ export function requireSameOrigin(request: Request) {
     !originUrl ||
     !["http:", "https:"].includes(originUrl.protocol) ||
     originUrl.origin !== origin ||
-    originUrl.host !== targetHost ||
+    (originUrl.host !== targetHost && !isLocalServiceProxy(request, originUrl, target)) ||
     (target.protocol === "https:" && originUrl.protocol !== "https:") ||
     request.headers.get("sec-fetch-site") === "cross-site"
   ) {

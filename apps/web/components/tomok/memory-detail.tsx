@@ -21,6 +21,7 @@ import type {
   ProjectMemory,
 } from "@/lib/tomok/memory-types";
 import { useProjectJson } from "./use-project-json";
+import { StartReviewedReplay } from "./start-reviewed-replay";
 import {
   MemoryContentFields,
   memoryContentIssue,
@@ -175,12 +176,12 @@ function MemoryRecord({
           <strong>Reason:</strong> {latest.reason}
         </p>
       )}
-      {memory.createdBy.id === data.viewer.id && (
+      {data.origin && (
         <Link
           className="tm-origin-link"
-          href={`/investigations/${encodeURIComponent(memory.originInvestigationId)}`}
+          href={data.origin.href}
         >
-          Originating investigation
+          {data.origin.kind === "replay" ? "Originating replay stage" : "Originating investigation"}
           <ArrowUpRight size={13} aria-hidden="true" />
         </Link>
       )}
@@ -207,6 +208,7 @@ function MemoryRecord({
           {notice}
         </p>
       )}
+      {latest.status === "reviewed" && currentImport ? <StartReviewedReplay originCutoff={data.origin?.cutoff} /> : null}
       {!editing ? (
         <div className="tm-form-actions">
           <button

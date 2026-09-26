@@ -11,6 +11,53 @@
 .tk-investigation * {
   box-sizing: border-box;
 }
+.tk-date-control.tk-milestone-control {
+  margin-top: 20px;
+  grid-template-columns: 130px minmax(0, 1fr);
+}
+.tk-selected-source,
+.tk-milestone-context {
+  margin: 24px 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--card);
+  overflow-wrap: anywhere;
+}
+.tk-selected-source h3,
+.tk-milestone-context h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+.tk-selected-source a {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+.tk-selected-source p,
+.tk-milestone-context > p {
+  line-height: 1.6;
+}
+.tk-selected-source p {
+  margin: 9px 0 0;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.tk-source-version code { font-size: 10px; }
+.tk-form-source { background: var(--background); }
+.tk-form-source .tk-text-button { margin-top: 12px; }
+.tk-dependency-details { margin-top: 15px; font-size: 11px; }
+.tk-dependency-details summary { cursor: pointer; line-height: 1.5; }
+.tk-dependency-details ul { padding-left: 18px; line-height: 1.7; }
+.tk-dependency-table { overflow-x: auto; margin-top: 14px; }
+.tk-dependency-table table { width: 100%; min-width: 650px; border-collapse: collapse; }
+.tk-dependency-table caption { text-align: left; color: var(--muted-foreground); padding-bottom: 10px; line-height: 1.5; }
+.tk-dependency-table th,
+.tk-dependency-table td { text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); padding: 10px 10px 10px 0; line-height: 1.55; }
+.tk-dependency-table th { font-weight: 550; }
+.tk-dependency-table span { display: block; font-weight: 400; color: var(--muted-foreground); }
+.tk-dependency-table a { white-space: nowrap; }
+.tk-milestone-unselected { margin: 20px 0; }
 .tk-investigation :focus-visible {
   outline: 2px solid #2764c5;
   outline-offset: 3px;
@@ -445,6 +492,7 @@
     grid-template-columns: 1fr;
     gap: 8px;
   }
+  .tk-date-control.tk-milestone-control { grid-template-columns: 1fr; }
   .tk-date-control > p {
     grid-column: 1;
   }

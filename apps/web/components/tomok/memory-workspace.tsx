@@ -166,11 +166,11 @@ function NewMemory({ investigationId }: { investigationId: string }) {
   return (
     <MemoryFrame>
       <Link
-        href={`/investigations/${encodeURIComponent(investigationId)}`}
+        href={data?.investigation.href ?? "/memory"}
         className="tk-back-link"
       >
         <ArrowLeft size={13} aria-hidden="true" />
-        Back to investigation
+        {data?.investigation.kind === "replay" ? "Back to saved replay" : data ? "Back to investigation" : "Project memory"}
       </Link>
       <div className="tk-title-row">
         <BookOpen size={22} aria-hidden="true" />

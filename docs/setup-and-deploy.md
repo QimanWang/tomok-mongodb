@@ -52,6 +52,42 @@ The command creates or reuses a private Vercel Blob store, connects it to Produc
 
 This template enables memory only from the `EVE_MEMORY_BLOB_*` variables. A store you attach manually with the generic `BLOB_*` variables is ignored, so memory never takes over an application's own Blob store. In local development eve keeps memory in process and it resets when the dev server restarts.
 
+## Archive Missions
+
+Tomok's `/missions` workspace uses MongoDB for jobs, committed evidence, reports,
+policy history and session bindings. Configure `MONGODB_URI`, `MONGODB_DATABASE`
+and a random `TOMOK_MISSION_DISPATCH_SECRET` of at least 16 characters in each
+deployment environment. The web and eve services must receive the same values.
+Password mode supports one trusted operator; independent project users require
+the production authentication setup and `TOMOK_PROJECT_VIEWER_IDS` membership.
+
+The initial preset processes nine bounded units in three registered files. All
+eight source files must be available under `data/kiewit/bp-tunnel/` when deploying
+from the repository root. They remain gitignored and are served only by authorized
+source routes. A clean Git checkout therefore requires a separate source-data
+provisioning step before it can produce this deployment. Do not put source files
+under `public/`. Private planning documents and local secrets are excluded from
+the Vercel upload separately through `.vercelignore`.
+
+The web build traces source files into its project-file and domain API functions.
+The eve service build packages and validates the registered source assets needed
+by its tools. Production uses the authored minute-by-minute
+`reconcile_missions` schedule; verify the generated Cron configuration and logs
+after deployment. Set a random `CRON_SECRET` in Production so Vercel's scheduler
+authenticates its invocations. Its signed internal requests use the deployment's trusted
+`VERCEL_URL`; protected deployments also need an automation bypass credential.
+Local development uses `pnpm missions:worker --host localhost:3001` because eve
+dev does not fire scheduled tasks automatically. Stop that local worker when
+production takes over the same mission database to avoid two runtime hosts
+competing to reconcile the same sessions.
+
+Verify protected file access, Atlas retrieval, an agent-produced checkpoint and
+scheduled reconciliation on the deployed host. Pause preserves committed
+evidence, and Resume grants another bounded work period. An interrupted local
+workflow cannot move its in-flight model call to Vercel; the mission can recover
+from MongoDB checkpoints in a replacement session. Reports and lessons remain
+unreviewed until a person explicitly reviews them.
+
 ## Production Persistence Upgrade
 
 Configure Vercel Blob, Neon, Upstash, and Sign in with Vercel to switch the same codebase into production mode. Production mode uses Vercel identity, per-user long-term memory in private Blob storage, database-backed per-user history, and distributed rate limiting. The setup script automates this path:
@@ -60,6 +96,12 @@ Configure Vercel Blob, Neon, Upstash, and Sign in with Vercel to switch the same
 ./scripts/setup.sh
 # Or: ./scripts/setup.sh --scope <team-slug>
 ```
+
+The local environment pull preserves variables absent from Vercel and saves the
+previous file as a gitignored `.env.local.backup-*` with owner-only access.
+For subsequent pulls, run `pnpm exec node scripts/pull-env.mjs`; pulling directly
+over `.env.local` with `vercel env pull` replaces local-only credentials.
+Variables present in Vercel are refreshed; `.env.development.local` is left intact.
 
 Once all production environment variables are present, production mode takes precedence over `EVE_CHAT_PASSWORD`. Run migrations after the first production deployment:
 
@@ -104,7 +146,7 @@ When Neon is created through the import flow, `DATABASE_URL` is usually marked s
 Pull local env vars if you are running the app locally:
 
 ```bash
-vercel env pull .env.local --yes
+pnpm exec node scripts/pull-env.mjs
 ```
 
 ## Better Auth Secret
@@ -124,7 +166,7 @@ printf '%s' "<generated-secret>" | vercel env add BETTER_AUTH_SECRET production,
 Pull the value locally if needed:
 
 ```bash
-vercel env pull .env.local --yes
+pnpm exec node scripts/pull-env.mjs
 ```
 
 ## Sign in with Vercel
@@ -168,7 +210,7 @@ printf '%s' "<client-secret>" | vercel env add VERCEL_APP_CLIENT_SECRET producti
 Pull the updated values locally:
 
 ```bash
-vercel env pull .env.local --yes
+pnpm exec node scripts/pull-env.mjs
 ```
 
 `NEXT_PUBLIC_VERCEL_APP_CLIENT_ID` is intentionally public. `VERCEL_APP_CLIENT_SECRET` and `BETTER_AUTH_SECRET` must stay secret.
@@ -285,7 +327,7 @@ printf '%s' "<slack-connector-uid>" | vercel env add SLACK_CONNECTOR production,
 printf '%s' "<connector-uid>" | vercel env add NOTION_CONNECTOR production,preview,development
 printf '%s' "<connector-uid>" | vercel env add LINEAR_CONNECTOR production,preview,development
 printf '%s' "<connector-uid>" | vercel env add SENTRY_CONNECTOR production,preview,development
-vercel env pull .env.local --yes
+pnpm exec node scripts/pull-env.mjs
 ```
 
 For local development, the connections fall back to `slack/eve-chat-template`, `notion`, `linear`, and `sentry`, so local connectors created with the names above can work without editing files under `agent/`.

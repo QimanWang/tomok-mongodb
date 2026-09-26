@@ -1,6 +1,7 @@
 import { defineMemory } from "eve/memory";
 import { fileMemory } from "eve/memory/file";
 import { byPrincipal } from "eve/memory/scope";
+import { isBoundedProjectSession } from "../lib/session-scope";
 
 // Only the EVE_MEMORY_BLOB_* namespace enables memory on Vercel. eve also
 // accepts generic BLOB_* variables, but this template ignores them so memory
@@ -17,7 +18,8 @@ function hasMemoryBlobStorage() {
 export default defineMemory({
   description: "Remember stable facts and preferences about the caller.",
   provider: fileMemory(),
-  scope(context) {
+  async scope(context) {
+    if (await isBoundedProjectSession(context.session)) return null;
     // Do not expose memory tools until the deployed app has durable storage.
     if (process.env.VERCEL && !hasMemoryBlobStorage()) {
       return null;

@@ -53,6 +53,21 @@ export function FilesWorkspace() {
   const file =
     data?.files.find((file) => file.id === selectedId) ??
     (!selectedId ? data?.files[0] : undefined);
+  const investigationParams = new URLSearchParams();
+  if (file) {
+    investigationParams.set("source", file.id);
+    investigationParams.set("sha256", file.sha256);
+    investigationParams.set("sourceName", file.name);
+    const locationKeys = file.kind === "xer" ? ["activity"] : file.kind === "xlsx" ? ["sheet", "cell"] : [];
+    for (const key of locationKeys) {
+      const value = params.get(key);
+      if (value) investigationParams.set(key, value);
+    }
+    if (file.kind === "pdf") {
+      const requestedPage = Number(params.get("page") || "1");
+      investigationParams.set("page", String(Math.max(1, Math.min(file.pages ?? 1, Number.isFinite(requestedPage) ? Math.floor(requestedPage) : 1))));
+    }
+  }
   function choose(file: ProjectFile) {
     updateLocation({
       file: file.id,
@@ -173,15 +188,10 @@ export function FilesWorkspace() {
                 <div className="pf-document-actions">
                   <Link
                     className="pf-button"
-                    href={`/investigations?${new URLSearchParams({
-                      source: file.id,
-                      ...(params.get("activity")
-                        ? { activity: params.get("activity")! }
-                        : {}),
-                    }).toString()}`}
-                    title="Investigate South Portal jet grouting across the project records"
+                    href={`/investigations?${investigationParams}`}
+                    title="Attach this source location to a South Portal jet-grout investigation"
                   >
-                    Jet-grout investigation
+                    Investigate with this source
                   </Link>
                   <span className="pf-badge">Read-only</span>
                   <button
