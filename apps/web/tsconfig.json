@@ -27,6 +27,8 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
+    "../../agent/**/*.ts",
+    "../../scripts/import-project.ts",
     ".eve/**/*.d.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"

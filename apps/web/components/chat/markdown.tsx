@@ -4,13 +4,37 @@ import { cjk } from "@streamdown/cjk";
 import { code } from "@streamdown/code";
 import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
-import { memo, type ComponentProps } from "react";
+import { createContext, memo, useContext, type ComponentProps } from "react";
 import { Streamdown } from "streamdown";
 import { cn } from "@/lib/utils";
+import { resolveProjectHref } from "@/lib/chat/project-links";
 
 const streamdownPlugins = { cjk, code, math, mermaid };
 
-export type MarkdownProps = ComponentProps<typeof Streamdown>;
+export type MarkdownProps = ComponentProps<typeof Streamdown> & {
+  authoritativeProjectLinks?: ReadonlySet<string>;
+};
+
+const emptyProjectLinks: ReadonlySet<string> = new Set();
+const ProjectLinksContext = createContext(emptyProjectLinks);
+
+function MarkdownLink({ className, href, target, ...props }: ComponentProps<"a">) {
+  const authoritative = useContext(ProjectLinksContext);
+  const resolved = resolveProjectHref(href, authoritative);
+  const isProjectLink = Boolean(resolved && authoritative.has(resolved));
+  return (
+    <a
+      className={cn(
+        "font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-foreground",
+        className,
+      )}
+      rel="noreferrer"
+      {...props}
+      href={resolved}
+      target={isProjectLink ? undefined : target ?? "_blank"}
+    />
+  );
+}
 
 const markdownComponents: MarkdownProps["components"] = {
   h1: ({ className, ...props }) => (
@@ -91,16 +115,8 @@ const markdownComponents: MarkdownProps["components"] = {
   strong: ({ className, ...props }) => (
     <strong className={cn("font-medium text-foreground", className)} {...props} />
   ),
-  a: ({ className, ...props }) => (
-    <a
-      className={cn(
-        "font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-foreground",
-        className,
-      )}
-      rel="noreferrer"
-      target="_blank"
-      {...props}
-    />
+  a: ({ className, href, target, ...props }) => (
+    <MarkdownLink className={className} href={href} target={target} {...props} />
   ),
   inlineCode: ({ className, ...props }) => (
     <code
@@ -113,16 +129,18 @@ const markdownComponents: MarkdownProps["components"] = {
   ),
 };
 
-export const Markdown = memo(function Markdown({ className, ...props }: MarkdownProps) {
+export const Markdown = memo(function Markdown({ className, authoritativeProjectLinks = emptyProjectLinks, ...props }: MarkdownProps) {
   return (
-    <Streamdown
-      className={cn(
-        "min-w-0 text-[15px] leading-6 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
-        className,
-      )}
-      components={markdownComponents}
-      plugins={streamdownPlugins}
-      {...props}
-    />
+    <ProjectLinksContext.Provider value={authoritativeProjectLinks}>
+      <Streamdown
+        className={cn(
+          "min-w-0 text-[15px] leading-6 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+          className,
+        )}
+        components={markdownComponents}
+        plugins={streamdownPlugins}
+        {...props}
+      />
+    </ProjectLinksContext.Provider>
   );
 });

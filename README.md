@@ -1,4 +1,31 @@
-# eve Chat Template
+# Tomok
+
+Schedule investigations and reviewed project memory, built on the eve chat template.
+The [hackathon build plan](docs/tomok-company/hackathon/build-plan.md) and
+[high-level design](docs/tomok-company/hackathon/high-level-design.md) now live in
+this repository. The port includes the source-file viewers, MongoDB evidence
+import, saved investigations, and human-reviewed memory from the `tomok` repo,
+including its in-progress memory changes.
+
+The product routes are `/files`, `/investigations`, and `/memory`. Web code lives
+under `apps/web`; the eve agent and its five project tools live under `agent`.
+The newer eve service composition in `vercel.ts` remains in place.
+
+Use Node 24+ and `pnpm install`. Keep the eight registered source files in
+`data/kiewit/bp-tunnel/` (gitignored). Validate them with
+`pnpm import:project --dry-run`. To enable investigations and reviewed memory,
+set `MONGODB_URI` and `MONGODB_DATABASE` in the root `.env.local`, then run
+`pnpm import:project` and `pnpm dev:services`. Sign in with Vercel mode also needs
+`TOMOK_PROJECT_VIEWER_IDS`; password mode represents one trusted operator.
+Web-only `pnpm dev:web` reads environment files from `apps/web`, so pass the
+same environment explicitly when running the web service on its own.
+
+Checks: `pnpm test:tomok`, `pnpm test:project-files`, `pnpm typecheck`,
+`pnpm build:web`, and `pnpm test:project-files:api` (after building the web app).
+`pnpm build:eve` builds the separate agent. Vector Search and later-report
+reassessment remain planned.
+
+## Chat template setup
 
 A Next.js chat template for [eve](https://eve.dev) that starts with password access and browser-persisted chats, then upgrades to durable memory, Sign in with Vercel, Neon, and Upstash when you need a production multi-user application.
 

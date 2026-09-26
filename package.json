@@ -23,7 +23,11 @@
     "dev:services": "vercel dev",
     "dev:web": "next dev apps/web",
     "start:eve": "eve start",
-    "typecheck": "next typegen apps/web && tsgo --noEmit -p apps/web/tsconfig.json"
+    "typecheck": "next typegen apps/web && tsgo --noEmit -p apps/web/tsconfig.json",
+    "test:project-files": "node --import tsx --test tests/project-files.test.mjs",
+    "test:project-files:api": "node tests/project-files-api.mjs",
+    "import:project": "node --env-file-if-exists=.env.local --env-file-if-exists=.env.development.local --import tsx scripts/import-project.ts",
+    "test:tomok": "node --import tsx --test tests/tomok-*.test.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",
@@ -44,10 +48,16 @@
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cmdk": "1.1.1",
+    "docx-preview": "0.4.0",
     "drizzle-orm": "0.45.2",
     "eve": "^0.66.3",
+    "exceljs": "4.4.0",
+    "fast-xml-parser": "^5.11.1",
+    "jszip": "3.10.1",
     "lucide-react": "1.33.0",
+    "mongodb": "^7.6.0",
     "next": "16.3.4",
+    "pdfjs-dist": "^6.3.289",
     "radix-ui": "1.6.7",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -56,6 +66,7 @@
     "tailwind-merge": "3.6.0",
     "tailwindcss": "4.3.3",
     "use-stick-to-bottom": "1.1.6",
+    "xer-parser": "2.1.0",
     "zod": "4.4.3"
   },
   "devDependencies": {
@@ -65,6 +76,8 @@
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "drizzle-kit": "0.31.10",
     "microsandbox": "^0.5.10",
+    "mongodb-memory-server": "^11.3.0",
+    "tsx": "^4.23.15",
     "typescript": "7.0.2",
     "vercel": "60.1.3"
   },

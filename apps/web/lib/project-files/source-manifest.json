@@ -1,0 +1,195 @@
+{
+  "reviewed_at": "2026-09-22",
+  "source_root": "data/kiewit/bp-tunnel",
+  "originals_modified": false,
+  "review_scope": "Structural inventory of all eight files; XER tables parsed for inspection; workbook leading data columns and selected relevant formulas; specification text indexed and selected sections inspected; baseline narrative and communication-plan context reviewed. No schedule recalculation or workbook edit.",
+  "files": [
+    {
+      "name": "Conformed_Set_of_Specs_2-33.pdf",
+      "bytes": 42496528,
+      "sha256": "8a814954be66cebaf0c953772906212603d9c527a892dde9ee2c2c4bdd753687",
+      "pages": 920,
+      "path": "data/kiewit/bp-tunnel/Conformed_Set_of_Specs_2-33.pdf"
+    },
+    {
+      "name": "Conformed_Set_of_Specs_Div_01__3.pdf",
+      "bytes": 6538104,
+      "sha256": "491852eb50ffedc112ce49e88c329012ff4ee6d917cca4bdc25330bc6a775efe",
+      "pages": 342,
+      "path": "data/kiewit/bp-tunnel/Conformed_Set_of_Specs_Div_01__3.pdf"
+    },
+    {
+      "name": "Daily-Construction-Report-july12-july17.xlsx",
+      "bytes": 16205,
+      "sha256": "a32dce5276ea52680303d9175f8709202298da075bfbb4f9282e5d5dfe5088ce",
+      "sheets": [
+        {
+          "name": "Daily Construction Report",
+          "rows": 15,
+          "cols": 64,
+          "state": "visible"
+        },
+        {
+          "name": "Comments",
+          "rows": 1,
+          "cols": 1,
+          "state": "visible"
+        }
+      ],
+      "path": "data/kiewit/bp-tunnel/Daily-Construction-Report-july12-july17.xlsx"
+    },
+    {
+      "name": "FDT-A-MS-R23.xer",
+      "bytes": 2361559,
+      "sha256": "34dc842bf8c24545cb7f94f82576fbcaddb00a3b83798e54c0eb58460ffc3861",
+      "encoding": "cp1252",
+      "tables": {
+        "CURRTYPE": 2,
+        "FINTMPL": 1,
+        "LOCATION": 208,
+        "MEMOTYPE": 2,
+        "OBS": 4,
+        "PCATTYPE": 2,
+        "RCATTYPE": 1,
+        "UDFTYPE": 44,
+        "ACCOUNT": 100,
+        "PCATVAL": 2,
+        "RCATVAL": 1,
+        "PROJECT": 1,
+        "CALENDAR": 12,
+        "PROJPCAT": 2,
+        "SCHEDOPTIONS": 1,
+        "PROJWBS": 673,
+        "RSRC": 5,
+        "ACTVTYPE": 4,
+        "RSRCRATE": 4,
+        "RSRCRCAT": 4,
+        "TASK": 1793,
+        "ACTVCODE": 184,
+        "TASKMEMO": 6,
+        "TASKPRED": 3103,
+        "TASKRSRC": 1154,
+        "TASKACTV": 4251,
+        "UDFVALUE": 12517
+      },
+      "projects": [
+        {
+          "proj_id": "38856",
+          "proj_short_name": "FDT-A-MS-R23",
+          "orig_proj_id": "",
+          "base_type_id": "",
+          "last_recalc_date": "2026-04-27 07:00",
+          "plan_start_date": "2023-09-14 00:00",
+          "scd_end_date": "2031-06-08 16:00",
+          "add_date": "2026-06-25 13:52",
+          "last_fin_dates_id": "",
+          "export_flag": "Y"
+        }
+      ],
+      "path": "data/kiewit/bp-tunnel/FDT-A-MS-R23.xer"
+    },
+    {
+      "name": "FDT-A_GMP_2A_Baseline_Narrative_Draft_Review_Landscape_Reordered-hR4og2xLUTB5elfVBBfHzHhAVaRDSD.pdf",
+      "bytes": 1126444,
+      "sha256": "de07290e6f1f9fc4118c77c7814a85a8c2301a76c27b948828533bc9cc665e91",
+      "pages": 13,
+      "path": "data/kiewit/bp-tunnel/FDT-A_GMP_2A_Baseline_Narrative_Draft_Review_Landscape_Reordered-hR4og2xLUTB5elfVBBfHzHhAVaRDSD.pdf"
+    },
+    {
+      "name": "FDTP - Program 6-Week Lookahead_KSTC_WE 2026.06.27.xlsx",
+      "bytes": 669533,
+      "sha256": "e3bd89d6d6f314b1e435ec5d31950e9e7560298c98c07ac8dc96df9842f114ca",
+      "sheets": [
+        {
+          "name": "6-Week",
+          "rows": 930,
+          "cols": 16339,
+          "state": "visible"
+        },
+        {
+          "name": "Holidays",
+          "rows": 342,
+          "cols": 5,
+          "state": "visible"
+        },
+        {
+          "name": "Drop Downs",
+          "rows": 356,
+          "cols": 17,
+          "state": "visible"
+        }
+      ],
+      "path": "data/kiewit/bp-tunnel/FDTP - Program 6-Week Lookahead_KSTC_WE 2026.06.27.xlsx"
+    },
+    {
+      "name": "SOE-Master-Schedule.xlsx",
+      "bytes": 3975456,
+      "sha256": "0213ada757e63e771e67d550ffd3e5e151ee0f9f241409fd3e534663facf7368",
+      "sheets": [
+        {
+          "name": "Q2 2026 Archive",
+          "rows": 213,
+          "cols": 177,
+          "state": "hidden"
+        },
+        {
+          "name": "2026 Master Schedule",
+          "rows": 409,
+          "cols": 289,
+          "state": "visible"
+        },
+        {
+          "name": "DNU-06.2026 Archive",
+          "rows": 325,
+          "cols": 367,
+          "state": "hidden"
+        },
+        {
+          "name": "Q1 2026 Version",
+          "rows": 481,
+          "cols": 16378,
+          "state": "hidden"
+        },
+        {
+          "name": "PM Due 7.14",
+          "rows": 78,
+          "cols": 17,
+          "state": "visible"
+        },
+        {
+          "name": "Holidays",
+          "rows": 340,
+          "cols": 5,
+          "state": "visible"
+        },
+        {
+          "name": "Workforce Schedule",
+          "rows": 68,
+          "cols": 177,
+          "state": "hidden"
+        },
+        {
+          "name": "Complete Overview",
+          "rows": 416,
+          "cols": 241,
+          "state": "hidden"
+        },
+        {
+          "name": "Before 2026",
+          "rows": 407,
+          "cols": 126,
+          "state": "hidden"
+        }
+      ],
+      "path": "data/kiewit/bp-tunnel/SOE-Master-Schedule.xlsx"
+    },
+    {
+      "name": "Schedule-Communication-Plan.docx",
+      "bytes": 388342,
+      "sha256": "6fd2b9cd81ccf51754cb068f6df7bf4d30f1c5704be79f0533b9f6b91fdc30f1",
+      "paragraphs": 35,
+      "tables": 2,
+      "path": "data/kiewit/bp-tunnel/Schedule-Communication-Plan.docx"
+    }
+  ]
+}

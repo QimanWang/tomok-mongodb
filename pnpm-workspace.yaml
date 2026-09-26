@@ -37,3 +37,4 @@ minimumReleaseAgeExclude:
 
 allowBuilds:
   esbuild: true
+  mongodb-memory-server: false

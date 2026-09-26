@@ -1,9 +1,22 @@
 "use client";
 
-import { ArrowRightIcon, EllipsisIcon, PanelLeftIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import {
+  ArrowRightIcon,
+  EllipsisIcon,
+  FolderOpenIcon,
+  BookOpenIcon,
+  SearchIcon,
+  PanelLeftIcon,
+  PlusIcon,
+  Trash2Icon,
+} from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
-import { AuthDisplayLoggedIn, AuthDisplayLoggedOut } from "@/components/auth/auth-display";
+import { usePathname } from "next/navigation";
+import { Suspense, useEffect, useRef } from "react";
+import {
+  AuthDisplayLoggedIn,
+  AuthDisplayLoggedOut,
+} from "@/components/auth/auth-display";
 import { UserMenu } from "@/components/auth/user-menu";
 import { VercelIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
@@ -17,7 +30,8 @@ import type { ChatListItem, SetupStatus, Viewer } from "@/lib/chat/types";
 import { cn } from "@/lib/utils";
 
 const activeRowClass = "bg-muted/50 text-foreground hover:bg-muted/60";
-const inactiveRowClass = "text-muted-foreground hover:bg-muted/50 hover:text-foreground";
+const inactiveRowClass =
+  "text-muted-foreground hover:bg-muted/50 hover:text-foreground";
 
 export function ChatSidebar({
   activeChatId,
@@ -51,7 +65,6 @@ export function ChatSidebar({
   readonly viewer: Viewer | null;
 }) {
   const authDisabled = !setupStatus.appReady;
-  const newSessionActive = activeChatId === null;
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -108,20 +121,22 @@ export function ChatSidebar({
             </Button>
           ) : null}
         </div>
-        <button
-          className={cn(
-            "flex h-8 items-center gap-2 rounded-md px-2 text-left text-sm transition-colors",
-            newSessionActive ? activeRowClass : inactiveRowClass,
-          )}
-          onClick={() => {
-            onNewChat();
-            onNavigate?.(null);
-          }}
-          type="button"
+        <Suspense
+          fallback={
+            <SidebarNavigation
+              activeChatId={activeChatId}
+              onNewChat={onNewChat}
+              onNavigate={onNavigate}
+              pathname={null}
+            />
+          }
         >
-          <PlusIcon className="size-4" />
-          New session
-        </button>
+          <ResolvedSidebarNavigation
+            activeChatId={activeChatId}
+            onNewChat={onNewChat}
+            onNavigate={onNavigate}
+          />
+        </Suspense>
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 py-2">
@@ -144,7 +159,9 @@ export function ChatSidebar({
                     onClick={() => onNavigate?.(chat.id)}
                   >
                     <span className="block truncate">{chat.title}</span>
-                    <span className="sr-only">Updated {formatHistoryTime(chat.updatedAt)}</span>
+                    <span className="sr-only">
+                      Updated {formatHistoryTime(chat.updatedAt)}
+                    </span>
                   </Link>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -251,4 +268,65 @@ function formatHistoryTime(value: string) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+type SidebarNavigationProps = {
+  activeChatId: string | null;
+  onNewChat: () => void;
+  onNavigate?: (chatId?: string | null) => void;
+};
+function ResolvedSidebarNavigation(props: SidebarNavigationProps) {
+  const pathname = usePathname();
+  return <SidebarNavigation {...props} pathname={pathname} />;
+}
+function SidebarNavigation({
+  activeChatId,
+  onNewChat,
+  onNavigate,
+  pathname,
+}: SidebarNavigationProps & { pathname: string | null }) {
+  const filesActive = pathname === "/files";
+  const memoryActive = pathname === "/memory" || Boolean(pathname?.startsWith("/memory/"));
+  const investigationsActive = pathname === "/investigations" || Boolean(pathname?.startsWith("/investigations/"));
+  const newSessionActive = activeChatId === null && !filesActive && !memoryActive && !investigationsActive;
+  return (
+    <>
+      <button
+        className={cn(
+          "flex h-8 items-center gap-2 rounded-md px-2 text-left text-sm transition-colors",
+          newSessionActive ? activeRowClass : inactiveRowClass,
+        )}
+        onClick={() => {
+          onNewChat();
+          onNavigate?.(null);
+        }}
+        type="button"
+      >
+        <PlusIcon className="size-4" />
+        New session
+      </button>
+      <Link
+        href="/files"
+        onClick={() => onNavigate?.(null)}
+        className={cn(
+          "flex h-8 items-center gap-2 rounded-md px-2 text-sm transition-colors",
+          filesActive ? activeRowClass : inactiveRowClass,
+        )}
+        aria-current={filesActive ? "page" : undefined}
+      >
+        <FolderOpenIcon className="size-4" />
+        Project files
+      </Link>
+      <Link href="/investigations" onClick={() => onNavigate?.(null)}
+        className={cn("flex h-8 items-center gap-2 rounded-md px-2 text-sm transition-colors", investigationsActive ? activeRowClass : inactiveRowClass)}
+        aria-current={investigationsActive ? "page" : undefined}>
+        <SearchIcon className="size-4" />Investigations
+      </Link>
+      <Link href="/memory" onClick={() => onNavigate?.(null)}
+        className={cn("flex h-8 items-center gap-2 rounded-md px-2 text-sm transition-colors", memoryActive ? activeRowClass : inactiveRowClass)}
+        aria-current={memoryActive ? "page" : undefined}>
+        <BookOpenIcon className="size-4" />Project memory
+      </Link>
+    </>
+  );
 }

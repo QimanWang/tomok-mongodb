@@ -1,13 +1,20 @@
 "use client";
 
 import type { EveDynamicToolPart, EveMessage, EveMessagePart } from "eve/react";
-import { ChevronDownIcon, ChevronRightIcon, CheckIcon, Loader2Icon, XIcon } from "lucide-react";
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  CheckIcon,
+  Loader2Icon,
+  XIcon,
+} from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Markdown } from "@/components/chat/markdown";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { collectTomokProjectLinks } from "@/lib/chat/project-links";
 
 const STREAM_TEXT_TICK_MS = 60;
 const STREAM_TEXT_CACHE_LIMIT = 40;
@@ -84,6 +91,7 @@ function AgentMessageParts({
   readonly showCaret: boolean;
 }) {
   const elements: ReactNode[] = [];
+  const authoritativeProjectLinks = collectTomokProjectLinks(parts);
   let pendingTools: EveDynamicToolPart[] = [];
 
   const flushTools = (isSettled: boolean) => {
@@ -116,6 +124,7 @@ function AgentMessageParts({
 
     elements.push(
       <AgentMessagePart
+        authoritativeProjectLinks={authoritativeProjectLinks}
         canRespond={canRespond}
         isUser={isUser}
         key={key}
@@ -133,6 +142,7 @@ function AgentMessageParts({
 }
 
 function AgentMessagePart({
+  authoritativeProjectLinks,
   canRespond,
   isUser,
   onInputResponses,
@@ -140,6 +150,7 @@ function AgentMessagePart({
   showCaret,
   streamKey,
 }: {
+  readonly authoritativeProjectLinks: ReadonlySet<string>;
   readonly canRespond: boolean;
   readonly isUser: boolean;
   readonly onInputResponses: (responses: readonly AgentInputResponse[]) => void | Promise<void>;
@@ -154,10 +165,10 @@ function AgentMessagePart({
       return isUser ? (
         <UserTextPart text={part.text} />
       ) : (
-        <AssistantTextPart showCaret={showCaret} streamKey={streamKey} text={part.text} />
+        <AssistantTextPart authoritativeProjectLinks={authoritativeProjectLinks} showCaret={showCaret} streamKey={streamKey} text={part.text} />
       );
     case "reasoning":
-      return <ReasoningPart isStreaming={part.state === "streaming"} text={part.text} />;
+      return <ReasoningPart authoritativeProjectLinks={authoritativeProjectLinks} isStreaming={part.state === "streaming"} text={part.text} />;
     case "dynamic-tool":
       return null;
   }
@@ -168,10 +179,12 @@ function UserTextPart({ text }: { readonly text: string }) {
 }
 
 function AssistantTextPart({
+  authoritativeProjectLinks,
   showCaret,
   streamKey,
   text,
 }: {
+  readonly authoritativeProjectLinks: ReadonlySet<string>;
   readonly showCaret: boolean;
   readonly streamKey: string;
   readonly text: string;
@@ -182,6 +195,7 @@ function AssistantTextPart({
 
   return (
     <Markdown
+      authoritativeProjectLinks={authoritativeProjectLinks}
       animated={isRevealActive ? { duration: 0, stagger: 0 } : undefined}
       caret={showVisibleCaret ? "block" : undefined}
       isAnimating={isRevealActive}
@@ -319,9 +333,11 @@ function nextStreamingText(current: string, target: string, catchUp = false) {
 }
 
 function ReasoningPart({
+  authoritativeProjectLinks,
   isStreaming,
   text,
 }: {
+  readonly authoritativeProjectLinks: ReadonlySet<string>;
   readonly isStreaming: boolean;
   readonly text: string;
 }) {
@@ -342,7 +358,7 @@ function ReasoningPart({
         <ChevronDownIcon className={cn("size-4 transition-transform", open ? "rotate-180" : "")} />
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-3 border-l border-border pl-4 text-muted-foreground">
-        <Markdown>{text}</Markdown>
+        <Markdown authoritativeProjectLinks={authoritativeProjectLinks}>{text}</Markdown>
       </CollapsibleContent>
     </Collapsible>
   );
@@ -363,7 +379,8 @@ function ToolGroup({
   const [open, setOpen] = useState(shouldOpen);
   const status = getSettledToolStatus(getToolGroupStatus(parts), isSettled && !shouldOpen);
   const label = summarizeToolGroup(parts, status);
-  const canExpand = parts.length > 1 ? parts.some(hasToolDetails) : hasToolDetails(parts[0]!);
+  const canExpand =
+    parts.length > 1 ? parts.some(hasToolDetails) : hasToolDetails(parts[0]!);
 
   useEffect(() => {
     if (shouldOpen) {
@@ -456,10 +473,7 @@ function ToolCallItem({
       <span className="truncate text-foreground/80">{describeToolAction(part, status)}</span>
       {canExpand ? (
         <ChevronRightIcon
-          className={cn(
-            "ml-auto size-3 shrink-0 self-center transition-transform",
-            open ? "rotate-90" : "",
-          )}
+          className={cn("ml-auto size-3 shrink-0 self-center transition-transform", open ? "rotate-90" : "")}
         />
       ) : null}
     </button>
@@ -473,7 +487,11 @@ function ToolCallItem({
     <Collapsible className="py-0.5" onOpenChange={setOpen} open={open}>
       <CollapsibleTrigger asChild>{button}</CollapsibleTrigger>
       <CollapsibleContent className="mt-1 ml-5">
-        <ToolDetails canRespond={canRespond} onInputResponses={onInputResponses} part={part} />
+        <ToolDetails
+          canRespond={canRespond}
+          onInputResponses={onInputResponses}
+          part={part}
+        />
       </CollapsibleContent>
     </Collapsible>
   );
@@ -859,7 +877,11 @@ function formatToolName(name: string) {
 }
 
 function normalizeToolName(name: string) {
-  return name.replace(/__/g, " ").replace(/[_-]/g, " ").trim().toLowerCase();
+  return name
+    .replace(/__/g, " ")
+    .replace(/[_-]/g, " ")
+    .trim()
+    .toLowerCase();
 }
 
 function formatDisplayName(value: string) {
