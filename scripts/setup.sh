@@ -305,4 +305,4 @@ fi
 
 # --- 10. Done ---------------------------------------------------------------
 step "Setup complete"
-bold "Start the app:  pnpm dev"
+bold "Start the app:  pnpm dev:services"

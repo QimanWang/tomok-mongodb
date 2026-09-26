@@ -7,15 +7,18 @@ This guide covers the database-free starter, local development, long-term memory
 - Node.js 24 or newer
 - pnpm through Corepack
 - A Vercel account
-- Vercel CLI, either installed globally or run with `pnpm dlx`
+- Vercel CLI 59.16.0 or newer (included as a project development dependency)
 
 ```bash
 corepack enable
+nvm use
 pnpm install
-pnpm dlx vercel@latest login
+pnpm exec vercel login
 ```
 
-The commands below use `vercel`. If you do not have a global install, replace `vercel` with `pnpm dlx vercel@latest`.
+The commands below use `vercel`. Run them with `pnpm exec vercel` to use the
+project's pinned CLI. `.nvmrc` selects Node.js 24; if you do not use nvm, install
+Node.js 24 or newer through your preferred version manager.
 
 ## One-Click Deploy
 
@@ -233,23 +236,22 @@ See the [Vercel env run docs](https://vercel.com/docs/cli/env) for more examples
 
 ## Run Locally
 
-Start the web app:
+Start the web app and eve services together:
 
 ```bash
-pnpm dev
+pnpm dev:services
 ```
 
 Or run it on port 3001:
 
 ```bash
-PORT=3001 pnpm dev
+pnpm dev:services --listen 3001
 ```
 
-To run the web app and eve as Vercel peer services, use:
-
-```bash
-pnpm dev:services
-```
+`pnpm dev` and `pnpm dev:web` run only Next.js, so they do not serve the
+`/eve/v1/*` chat endpoints. Local chat requires `pnpm dev:services`. Vercel CLI
+reserves the `dev` script for a framework server and rejects `vercel dev` in
+that script because it would recursively invoke itself.
 
 Open the matching local URL and make sure the Vercel App contains the same callback URL.
 

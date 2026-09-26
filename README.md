@@ -31,23 +31,29 @@ Production mode takes precedence when its complete environment is present. The a
 
 For the starter and production setup flows, see [Setup and Deployment](docs/setup-and-deploy.md). For the runtime architecture, streaming model, persistence flow, and extension points, see [How the Chatbot Works](docs/how-the-chatbot-works.md).
 
-Install dependencies with pnpm:
+Use Node.js 24 or newer and install dependencies with pnpm:
 
 ```bash
+nvm use
 pnpm install
 ```
 
-Run the web app locally without additional services:
+Link the existing Vercel project and pull its development credentials:
 
 ```bash
-pnpm dev
+pnpm exec vercel link --scope tomok-1987fe8e --project tomok-mongodb
+pnpm exec vercel env pull .env.local --yes
 ```
 
-To run the web app and eve as the Vercel service graph, use:
+Start the web app and eve together:
 
 ```bash
 pnpm dev:services
 ```
+
+The project includes a compatible Vercel CLI. `pnpm dev` and `pnpm dev:web` run
+only the frontend, without the agent. The model uses Vercel AI Gateway with the
+linked project's OIDC credential; no separate Anthropic API key is required.
 
 To require the same password locally, put this in `.env.local`:
 
@@ -124,13 +130,13 @@ For production, run migrations with Vercel production env vars:
 vercel env run -e production -- pnpm db:migrate
 ```
 
-Start the web app development server:
+Start the complete local chat app:
 
 ```bash
-pnpm dev
+pnpm dev:services
 ```
 
-Use `pnpm dev:services` to run the full Vercel service graph locally.
+Use `pnpm dev:web` for frontend-only development.
 
 ## What Is Included
 
